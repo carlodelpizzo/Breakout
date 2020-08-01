@@ -116,6 +116,8 @@ class MultiBall:
         if paddle_x + paddle_w + self.radius >= self.x >= paddle_x - self.radius and self.y >= paddle_y - self.radius:
             self.direction = (self.speed_limit_x(self.direction[0]), self.speed_limit_y(self.direction[1]))
             return True
+        else:
+            return False
 
     def collide_ball(self):
         for i in range(len(multi_ball)):
@@ -214,26 +216,23 @@ def display_ball_stats():
 
 
 def cheater_mode():
-    player.clear()
-
     # Follow Ball
-    # if multi_ball[0].x < (player.x + player.width / 2) + 1:
-    #     player.direction = "left"
-    # elif multi_ball[0].x > (player.x + player.width / 2) - 1:
-    #     player.direction = "right"
-    # if (player.x + player.width / 2) - 1 <= multi_ball[0].x <= (player.x + player.width / 2) + 1:
-    #     player.direction = ""
+    if multi_ball[0].x < (player.x + player.width / 2) + 1:
+        player.direction = "left"
+    elif multi_ball[0].x > (player.x + player.width / 2) - 1:
+        player.direction = "right"
+    if (player.x + player.width / 2) - 1 <= multi_ball[0].x <= (player.x + player.width / 2) + 1:
+        player.direction = ""
 
     # Give Ball x Momentum
-    # if player.direction == "":
-    #     if multi_ball[0].collide_paddle(player.x, player.y, player.width):
-    #         if multi_ball[0].direction[0] == 0:
-    #             ran = random.randint(0, 10)
-    #             if ran % 2 == 0:
-    #                 player.direction = "left"
-    #             else:
-    #                 player.direction = "right"
-
+    if player.direction == "":
+        if multi_ball[0].collide_paddle(player.x, player.y, player.width):
+            if multi_ball[0].direction[0] == 0:
+                ran = random.randint(0, 10)
+                if ran % 2 == 0:
+                    player.direction = "left"
+                else:
+                    player.direction = "right"
     # Teleport to Ball
     if multi_ball[0].x > player.x + player.width + multi_ball[0].radius:
         player.clear()
@@ -244,27 +243,31 @@ def cheater_mode():
         player.x = multi_ball[0].x
         player.draw()
     # Emergency Teleport
-    # if multi_ball[0].y + multi_ball[0].radius >= screen_height - 1:
-    #     if multi_ball[0].direction[0] >= 0:
-    #         player.x = multi_ball[0].x - player.width / 2
-    #         player.direction = "right"
-    #     else:
-    #         player.x = multi_ball[0].x - player.width / 2
-    #         player.direction = "left"
-
-    player.color = (255, 0, 0)
-    player.draw()
+    if multi_ball[0].y + multi_ball[0].radius >= screen_height - 1:
+        if multi_ball[0].direction[0] >= 0:
+            player.x = multi_ball[0].x - player.width / 2
+            player.direction = "right"
+        else:
+            player.x = multi_ball[0].x - player.width / 2
+            player.direction = "left"
 
 
 def cheater_mode_multi():
     for ball in range(len(multi_ball)):
         if multi_ball[ball].y + multi_ball[ball].radius >= player.y:
-            if multi_ball[ball].direction[0] >= 0:
+            if multi_ball[ball].direction[0] > 0:
                 player.x = multi_ball[ball].x - player.width / 2
                 player.direction = "right"
-            else:
+            elif multi_ball[ball].direction[0] < 0:
                 player.x = multi_ball[ball].x - player.width / 2
                 player.direction = "left"
+            else:
+                ran = random.randint(0, 2)
+                player.x = multi_ball[ball].x - player.width / 2
+                if ran % 2 == 0:
+                    player.direction = "left"
+                else:
+                    player.direction = "right"
 
 
 def game_loop():
@@ -278,6 +281,8 @@ def game_loop():
         multi_ball[i].move()
     for i in range(len(multi_ball)):
         multi_ball[i].draw()
+    if cheater:
+        player.direction = ""
     # display_ball_stats()
     pygame.display.flip()
 
