@@ -156,17 +156,17 @@ class Player:
         self.boost = False
         self.color = fgColor
 
-    def clear(self):
-        pygame.draw.rect(screen, bgColor, (int(self.x), int(self.y), self.width, self.height))
-
-    def draw(self):
-        pygame.draw.rect(screen, self.color, (int(self.x), int(self.y), self.width, self.height))
-
     def move(self):
         if self.direction == "left" and self.x >= 0:
             self.x -= self.speed
         elif self.direction == "right" and self.x <= screen_width - self.width:
             self.x += self.speed
+
+    def clear(self):
+        pygame.draw.rect(screen, bgColor, (int(self.x), int(self.y), self.width, self.height))
+
+    def draw(self):
+        pygame.draw.rect(screen, self.color, (int(self.x), int(self.y), self.width, self.height))
 
 
 class Brick:
@@ -223,7 +223,6 @@ def cheater_mode():
         player.direction = "right"
     if (player.x + player.width / 2) - 1 <= multi_ball[0].x <= (player.x + player.width / 2) + 1:
         player.direction = ""
-
     # Give Ball x Momentum
     if player.direction == "":
         if multi_ball[0].collide_paddle(player.x, player.y, player.width):
@@ -250,6 +249,11 @@ def cheater_mode():
         else:
             player.x = multi_ball[0].x - player.width / 2
             player.direction = "left"
+    # Bound Player
+    if player.x < 0:
+        player.x = 0
+    elif player.x > screen_width - player.width:
+        player.x = screen_width - player.width
 
 
 def cheater_mode_multi():
@@ -268,6 +272,10 @@ def cheater_mode_multi():
                     player.direction = "left"
                 else:
                     player.direction = "right"
+        if player.x < 0:
+            player.x = 0
+        elif player.x > screen_width - player.width:
+            player.x = screen_width - player.width
 
 
 def game_loop():
