@@ -16,7 +16,7 @@ bgColor = [0, 0, 0]
 fgColor = [50, 100, 200]
 # Font
 font_size = 25
-font = pygame.font.SysFont("Helvetica", font_size)
+font = pygame.font.SysFont("", font_size)
 
 
 class MultiBall:
