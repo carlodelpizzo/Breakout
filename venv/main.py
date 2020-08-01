@@ -6,12 +6,12 @@ from pygame.locals import *
 pygame.init()
 
 # Initialize Screen
-screenWidth = 1000
-screenHeight = 600
-screen = pygame.display.set_mode((screenWidth, screenHeight))
+screen_width = 1000
+screen_height = 600
+screen = pygame.display.set_mode((screen_width, screen_height))
 # Title
 pygame.display.set_caption("Title")
-# Set Screen Colors
+# Screen Colors
 bgColor = [0, 0, 0]
 fgColor = [50, 100, 200]
 
@@ -19,35 +19,34 @@ fgColor = [50, 100, 200]
 class Ball:
 
     def __init__(self, direction):
-        self.xPos = int(screenWidth / 2)
-        self.yPos = int(screenHeight / 5)
+        self.x = int(screen_width / 2)
+        self.y = int(screen_height / 5)
         self.radius = 15
         self.direction = direction
-
-    def clear(self):
-        if collide(self.xPos, self.yPos, self.radius, player.xPos, player.yPos, player.width):
-            pygame.draw.circle(screen, bgColor, (self.xPos, self.yPos), self.radius)
-            player.draw()
-        else:
-            pygame.draw.circle(screen, bgColor, (self.xPos, self.yPos), self.radius)
-
-    def draw(self):
-        pygame.draw.circle(screen, fgColor, (self.xPos, self.yPos), self.radius)
+        self.g = 0
 
     def move(self):
+        self.clear()
         self.bounce_wall()
         self.bounce_paddle()
-        self.clear()
-        if self.direction[0] > 10:
-            self.direction = (11 - (self.direction[0] % 10), self.direction[1])
-            self.xPos += self.direction[0]
-        else:
-            self.xPos += self.direction[0]
-        if self.direction[1] > 10:
-            self.direction = (self.direction[0], 11 - (self.direction[1] % 10))
-        else:
-            self.yPos += self.direction[1]
+        self.gravity()
+        self.speed_limit()
+        self.x += self.direction[0]
+        self.y += self.direction[1]
         self.draw()
+
+    def clear(self):
+        if collide(self.x, self.y, self.radius, player.x, player.y, player.width):
+            pygame.draw.circle(screen, bgColor, (self.x, self.y), self.radius)
+            player.draw()
+        else:
+            pygame.draw.circle(screen, bgColor, (self.x, self.y), self.radius)
+
+    def draw(self):
+        pygame.draw.circle(screen, fgColor, (self.x, self.y), self.radius)
+
+    def reset(self):
+        self.__init__((random.randint(-3, 3), random.randint(1, 2)))
 
     def flip_x(self):
         self.direction = (-self.direction[0], self.direction[1])
@@ -56,29 +55,36 @@ class Ball:
         self.direction = (self.direction[0], -self.direction[1])
 
     def update_pos(self, x, y):
-        self.clear()
-        self.xPos = x
-        self.yPos = y
-        self.draw()
+        self.x = x
+        self.y = y
+
+    def speed_limit(self):
+        max_y_speed = 7
+        max_x_speed = 5
+        if self.direction[0] > max_x_speed:
+            self.direction = (max_x_speed, self.direction[1])
+        if self.direction[1] > max_y_speed:
+            self.direction = (self.direction[0], max_y_speed)
 
     def bounce_wall(self):
-        if self.xPos <= self.radius:
+        if self.x <= self.radius:
             self.flip_x()
-            self.update_pos(self.radius, self.yPos)
-        elif self.xPos >= screenWidth - self.radius:
+            self.update_pos(self.radius, self.y)
+        elif self.x >= screen_width - self.radius:
             self.flip_x()
-            self.update_pos((screenWidth - self.radius), self.yPos)
-        if self.yPos <= self.radius:
+            self.update_pos((screen_width - self.radius), self.y)
+        if self.y <= self.radius:
             self.flip_y()
-            self.update_pos(self.xPos, self.radius)
-        if self.yPos >= screenHeight - self.radius:
+            self.update_pos(self.x, self.radius)
+        if self.y >= screen_height - self.radius:
             self.reset()
 
     def bounce_paddle(self):
+        # higher number = less boost
         boost_x = 300
-        boost_y = 500
-        if collide(self.xPos, self.yPos, self.radius, player.xPos, player.yPos, player.width):
-            self.update_pos(self.xPos, player.yPos - self.radius)
+        boost_y = 400
+        if collide(self.x, self.y, self.radius, player.x, player.y, player.width):
+            self.update_pos(self.x, player.y - self.radius)
             self.direction = (self.direction[0], -int(self.direction[1] + player.speed / boost_y))
             if player.direction != "":
                 if self.direction[0] >= 0 and player.direction == "right":
@@ -90,16 +96,21 @@ class Ball:
                 elif self.direction[0] < 0 and player.direction == "left":
                     self.direction = (self.direction[0] - int(player.speed / boost_x), self.direction[1])
 
-    def reset(self):
-        self.clear()
-        self.__init__((random.randint(-3, 3), random.randint(1, 2)))
+    def gravity(self):
+        # Smaller g = more gravity
+        big_g = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53]
+        if self.g % big_g[11] == 0:
+            self.direction = (self.direction[0], self.direction[1] + 1)
+        if self.g > big_g[11]:
+            self.g = 0
+        self.g += 1
 
 
 class Paddle:
 
     def __init__(self, x, y, width, height, direction, speed):
-        self.xPos = int(x - width / 2)
-        self.yPos = int(y - height / 2)
+        self.x = int(x - width / 2)
+        self.y = int(y - height / 2)
         self.width = width
         self.height = height
         self.direction = direction
@@ -108,26 +119,26 @@ class Paddle:
         self.color = fgColor
 
     def clear(self):
-        pygame.draw.rect(screen, bgColor, (self.xPos, self.yPos, self.width, self.height))
+        pygame.draw.rect(screen, bgColor, (self.x, self.y, self.width, self.height))
 
     def draw(self):
-        pygame.draw.rect(screen, self.color, (self.xPos, self.yPos, self.width, self.height))
+        pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
 
     def move(self):
-        if self.direction == "left" and self.xPos >= 0:
+        if self.direction == "left" and self.x >= 0:
             self.clear()
-            self.xPos -= int(self.speed / 100)
+            self.x -= int(self.speed / 100)
             self.draw()
-        elif self.direction == "right" and self.xPos <= screenWidth - self.width:
+        elif self.direction == "right" and self.x <= screen_width - self.width:
             self.clear()
-            self.xPos += int(self.speed / 100)
+            self.x += int(self.speed / 100)
             self.draw()
 
 
 class Brick:
     def __init__(self):
-        self.xPos = ""
-        self.yPos = ""
+        self.x = ""
+        self.y = ""
         self.color = ""
 
 
@@ -138,19 +149,42 @@ def collide(ball_x, ball_y, ball_r, paddle_x, paddle_y, paddle_w):
 
 def cheater_mode():
     player.clear()
-    if ball.xPos < (player.xPos + player.width / 2) + 1:
+
+    # Follow Ball
+    if ball.x < (player.x + player.width / 2) + 1:
         player.direction = "left"
-    elif ball.xPos > (player.xPos + player.width / 2) - 1:
+    elif ball.x > (player.x + player.width / 2) - 1:
         player.direction = "right"
-    if (player.xPos + player.width / 2) - 1 <= ball.xPos <= (player.xPos + player.width / 2) + 1:
+    if (player.x + player.width / 2) - 1 <= ball.x <= (player.x + player.width / 2) + 1:
         player.direction = ""
-    if ball.yPos + ball.radius >= player.yPos - 3:
+
+    # Give Ball x Momentum
+    if player.direction == "":
+        if collide(ball.x, ball.y, ball.radius, player.x, player.y, player.width) and ball.direction[0] == 0:
+            ran = random.randint(0, 10)
+            if ran % 2 == 0:
+                player.direction = "left"
+            else:
+                player.direction = "right"
+
+    # Teleport to Ball
+    if ball.x > player.x + player.width + ball.radius:
+        player.clear()
+        player.x = ball.x - ball.radius - player.width
+        player.draw()
+    if ball.x < player.x:
+        player.clear()
+        player.x = ball.x
+        player.draw()
+    # Emergency Teleport
+    if ball.y + ball.radius >= screen_height - 1:
         if ball.direction[0] >= 0:
-            player.xPos = ball.xPos - player.width / 2
+            player.x = ball.x - player.width / 2
             player.direction = "right"
         else:
-            player.xPos = ball.xPos - player.width / 2
+            player.x = ball.x - player.width / 2
             player.direction = "left"
+
     player.color = (255, 0, 0)
     player.draw()
 
@@ -158,16 +192,19 @@ def cheater_mode():
 # Initialize Ball
 ball = Ball((0, 1))
 ball.draw()
+# Multi-Ball
+multi_ball = []
+ball_m = 0
 # Initialize Paddle
-player = Paddle(int(screenWidth / 2), int(screenHeight - (screenHeight / 30)), 150, 20, "", 300)
+player = Paddle(int(screen_width / 2), int(screen_height - (screen_height / 30)), 150, 20, "", 300)
 player.draw()
 # Initialize Bricks
 bricks = Brick()
 
+# Game Loop
 clock = pygame.time.Clock()
 running = True
-cheater = False
-# Game Loop
+cheater = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -177,19 +214,19 @@ while running:
         # On Key Down
         if event.type == pygame.KEYDOWN:
             # Left/Right Movement
-            if keys[pygame.K_LEFT]:
-                if keys[pygame.K_RIGHT]:
+            if keys[K_LEFT] or keys[K_a]:
+                if keys[K_RIGHT] or keys[K_d]:
                     player.direction = ""
                 else:
                     player.direction = "left"
-            elif keys[pygame.K_RIGHT]:
-                if keys[pygame.K_LEFT]:
+            elif keys[K_RIGHT] or keys[K_d]:
+                if keys[K_LEFT] or keys[K_a]:
                     player.direction = ""
                 else:
                     player.direction = "right"
 
             # Shift Boost
-            if keys[K_LSHIFT] and player.boost is False:
+            if (keys[K_LSHIFT] or keys[K_RSHIFT]) and player.boost is False:
                 player.speed += 300
                 player.boost = True
 
@@ -205,26 +242,34 @@ while running:
                 player.color = fgColor
                 player.draw()
 
+            # Add Ball
+            if keys[K_b]:
+                multi_ball.append(ball_m)
+                # multi_ball[len(multi_ball) - 1] = Ball((random.randint(-3, 3), random.randint(1, 2)))
+                multi_ball[len(multi_ball) - 1] = Ball((0, 1))
+                ball_m += 1
+
         # On Key Up
         if event.type == pygame.KEYUP:
             # Left/Right Movement
-            if player.direction == "left" and keys[pygame.K_LEFT] == 0:
+            if player.direction == "left" and keys[K_LEFT] == 0 and keys[K_a] == 0:
                 player.direction = ""
-            elif player.direction == "right" and keys[pygame.K_RIGHT] == 0:
+            elif player.direction == "right" and keys[K_RIGHT] == 0 and keys[K_d] == 0:
                 player.direction = ""
-            elif keys[pygame.K_LEFT] and keys[pygame.K_RIGHT] == 0:
+            elif (keys[K_LEFT] or keys[K_a]) and (keys[K_RIGHT] == 0 or keys[K_d] == 0):
                 player.direction = "left"
-            elif keys[pygame.K_RIGHT] and keys[pygame.K_LEFT] == 0:
+            elif (keys[K_RIGHT] or keys[K_d]) and (keys[K_LEFT] == 0 or keys[K_a] == 0):
                 player.direction = "right"
 
             # Shift Boost
-            if keys[K_LSHIFT] == 0 and player.boost is True:
+            if keys[K_LSHIFT] == 0 and keys[K_RSHIFT] == 0 and player.boost is True:
                 player.speed -= 300
                 player.boost = False
-
     if cheater:
         cheater_mode()
     player.move()
     ball.move()
+    for i in range(len(multi_ball)):
+        multi_ball[i].move()
     pygame.display.flip()
     clock.tick(240)
