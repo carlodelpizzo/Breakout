@@ -29,7 +29,7 @@ class MultiBall:
         self.g = 0
 
     def move(self):
-        # self.gravity()
+        self.gravity()
         self.bounce_wall()
         self.bounce_paddle()
         self.update_pos(self.x + self.speed_limit_x(self.direction[0]), self.y + self.speed_limit_y(self.direction[1]))
@@ -213,20 +213,6 @@ def display_ball_stats():
     screen.blit(display_dy, (0, font_size * 2))
 
 
-def game_loop():
-    screen.fill(bgColor)
-    if cheater:
-        cheater_mode()
-    player.move()
-    player.draw()
-    for i in range(len(multi_ball)):
-        multi_ball[i].move()
-    for i in range(len(multi_ball)):
-        multi_ball[i].draw()
-    # display_ball_stats()
-    pygame.display.flip()
-
-
 def cheater_mode():
     player.clear()
 
@@ -268,6 +254,32 @@ def cheater_mode():
 
     player.color = (255, 0, 0)
     player.draw()
+
+
+def cheater_mode_multi():
+    for ball in range(len(multi_ball)):
+        if multi_ball[ball].y + multi_ball[ball].radius >= player.y:
+            if multi_ball[ball].direction[0] >= 0:
+                player.x = multi_ball[ball].x - player.width / 2
+                player.direction = "right"
+            else:
+                player.x = multi_ball[ball].x - player.width / 2
+                player.direction = "left"
+
+
+def game_loop():
+    screen.fill(bgColor)
+    if cheater:
+        # cheater_mode()
+        cheater_mode_multi()
+    player.move()
+    player.draw()
+    for i in range(len(multi_ball)):
+        multi_ball[i].move()
+    for i in range(len(multi_ball)):
+        multi_ball[i].draw()
+    # display_ball_stats()
+    pygame.display.flip()
 
 
 while running:
