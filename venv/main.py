@@ -202,12 +202,13 @@ class Brick:
 
 # Initialize Bricks (x, y, width, height, level)
 bricks = []
-brick_col = 10
+brick_col = 11
 brick_row = 3
 brick_lvl = 4
 brick_colors = [fgColor, red, green, blue]
 segment = screen_width / brick_col
 brick_w = segment * 0.70
+brick_space = (segment - brick_w) * brick_col / (brick_col + 1)
 brick_h = 20
 global brick_count
 brick_count = 0
@@ -215,8 +216,8 @@ brick_count = 0
 for row in range(brick_row):
     for col in range(brick_col):
         bricks.append(brick_count)
-        x_offset = (segment / 2) - (brick_w / 2) + (segment * col)
-        y_offset = (segment - brick_w) + ((brick_h + segment - brick_w) * row)
+        x_offset = brick_space + (brick_w + brick_space) * col
+        y_offset = brick_space + (brick_h + brick_space) * row
         bricks[brick_count] = Brick(x_offset, y_offset, brick_w, brick_h, brick_lvl)
         brick_count += 1
 
