@@ -22,9 +22,9 @@ font = pygame.font.SysFont("", font_size)
 class MultiBall:
 
     def __init__(self, direction):
-        self.x = screen_width / 2
-        self.y = screen_height / 5
         self.radius = 15
+        self.x = screen_width / 2
+        self.y = bricks[len(bricks) - 1].y + bricks[len(bricks) - 1].height + self.radius
         self.direction = direction
         self.g = 0
 
@@ -170,23 +170,47 @@ class Player:
 
 
 class Brick:
-    def __init__(self):
-        self.x = ""
-        self.y = ""
-        self.color = ""
+    def __init__(self, x, y, width, height, level):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.color = fgColor
+        self.level = level
 
+    def draw(self):
+        pygame.draw.rect(screen, self.color, (int(self.x), int(self.y), int(self.width), int(self.height)))
+
+    def clear(self):
+        pygame.draw.rect(screen, bgColor, (int(self.x), int(self.y), self.width, self.height))
+
+
+# Initialize Bricks (x, y, width, height, level)
+bricks = []
+brick_col = 10
+brick_row = 3
+brick_lvl = 2
+segment = screen_width / brick_col
+brick_w = segment * 0.70
+brick_h = 20
+brick_count = 0
+
+for row in range(brick_row):
+    for col in range(brick_col):
+        bricks.append(brick_count)
+        x_offset = (segment / 2) - (brick_w / 2) + (segment * col)
+        y_offset = (segment - brick_w) + ((brick_h + segment - brick_w) * row)
+        bricks[brick_count] = Brick(x_offset, y_offset, brick_w, brick_h, brick_lvl)
+        brick_count += 1
 
 # Initialize Ball (direction)
 multi_ball = [0]
-ball_number = 1
+ball_count = 1
 multi_ball[0] = MultiBall((0, 1))
 
 # Initialize Paddle (x, y, width, height, direction, speed)
 player = Player(screen_width / 2, screen_height - (screen_height / 30), 200, 20, "", 3)
 player.draw()
-
-# Initialize Bricks
-bricks = Brick()
 
 # Game Loop
 clock = pygame.time.Clock()
@@ -280,17 +304,30 @@ def cheater_mode_multi():
 
 def game_loop():
     screen.fill(bgColor)
+
+    # Cheater Mode Act
     if cheater:
         # cheater_mode()
         cheater_mode_multi()
+
+    # Player
     player.move()
     player.draw()
-    for i in range(len(multi_ball)):
+
+    # Brick
+    for brick in range(brick_count):
+        bricks[brick].draw()
+
+    # Ball
+    for i in range(ball_count):
         multi_ball[i].move()
-    for i in range(len(multi_ball)):
+    for i in range(ball_count):
         multi_ball[i].draw()
+
+    # Cheater Mode Stop
     if cheater:
         player.direction = ""
+
     # display_ball_stats()
     pygame.display.flip()
 
@@ -334,10 +371,17 @@ while running:
 
             # Add Ball
             if keys[K_b]:
-                multi_ball.append(ball_number)
+                multi_ball.append(ball_count)
                 # multi_ball[len(multi_ball) - 1] = Ball((random.randint(-3, 3), random.randint(1, 2)))
                 multi_ball[len(multi_ball) - 1] = MultiBall((0, 1))
-                ball_number += 1
+                ball_count += 1
+
+            # Kill Ball
+            if keys[K_k]:
+                if len(multi_ball) > 1:
+                    multi_ball.pop(len(multi_ball) - 1)
+                    # multi_ball[len(multi_ball) - 1] = Ball((random.randint(-3, 3), random.randint(1, 2)))
+                    ball_count -= 1
 
             # Pause
             if keys[K_SPACE] and pause is False:
