@@ -14,6 +14,9 @@ pygame.display.set_caption("Shitty Breakout")
 # Screen Colors
 bgColor = [0, 0, 0]
 fgColor = [50, 100, 200]
+red = [255, 0, 0]
+blue = [0, 255, 0]
+green = [0, 0, 255]
 # Font
 font_size = 25
 font = pygame.font.SysFont("", font_size)
@@ -22,16 +25,17 @@ font = pygame.font.SysFont("", font_size)
 class MultiBall:
 
     def __init__(self, direction):
-        self.radius = 15
+        self.radius = 11
         self.x = screen_width / 2
         self.y = bricks[len(bricks) - 1].y + bricks[len(bricks) - 1].height + self.radius
         self.direction = direction
         self.g = 0
 
     def move(self):
-        self.gravity()
+        # self.gravity()
         self.bounce_wall()
         self.bounce_paddle()
+        self.bounce_brick()
         self.update_pos(self.x + self.speed_limit_x(self.direction[0]), self.y + self.speed_limit_y(self.direction[1]))
 
     def clear(self):
@@ -119,17 +123,28 @@ class MultiBall:
         else:
             return False
 
-    def collide_ball(self):
-        for i in range(len(multi_ball)):
-            if self.x != multi_ball[i].x and self.y != multi_ball[i].y:
-                if multi_ball[i].x + multi_ball[i].radius + self.radius >= self.x:
-                    if self.x >= multi_ball[i].x - multi_ball[i].radius - self.radius:
-                        if multi_ball[i].y + multi_ball[i].radius + self.radius >= self.y:
-                            if self.y >= multi_ball[i].y - multi_ball[i].radius - self.radius:
-                                multi_ball[i].draw()
-                                return True
-            else:
-                return False
+    # need to fix bounce against all sides of brick
+    def bounce_brick(self):
+        global brick_count
+        broken_bricks = []
+        for brick in range(len(bricks)):
+            if bricks[brick].x + bricks[brick].width + self.radius >= self.x >= bricks[brick].x - self.radius:
+                if bricks[brick].y - self.radius <= self.y <= bricks[brick].y + bricks[brick].height + self.radius:
+                    if (self.y - self.radius - bricks[brick].y + bricks[brick].height)\
+                            > (bricks[brick].y - self.y + self.radius):
+                        self.y = bricks[brick].y + bricks[brick].height + self.radius + 1
+                        self.direction = (self.direction[0], -self.direction[1])
+                    else:
+                        self.y = bricks[brick].y - self.radius - 1
+                        self.direction = (self.direction[0], -self.direction[1])
+                    if bricks[brick].level - 1 == 0:
+                        broken_bricks.append(brick)
+                    else:
+                        bricks[brick].level -= 1
+                        bricks[brick].color = brick_colors[(bricks[brick].level % len(brick_colors))]
+        for pop in range(len(broken_bricks)):
+            bricks.pop(broken_bricks[pop])
+            brick_count -= 1
 
     def gravity(self):
         gravity = (0.12 / frame_rate)
@@ -189,10 +204,12 @@ class Brick:
 bricks = []
 brick_col = 10
 brick_row = 3
-brick_lvl = 2
+brick_lvl = 4
+brick_colors = [fgColor, red, green, blue]
 segment = screen_width / brick_col
 brick_w = segment * 0.70
 brick_h = 20
+global brick_count
 brick_count = 0
 
 for row in range(brick_row):
@@ -218,7 +235,7 @@ running = True
 cheater = False
 pause = False
 shift_boost = 3
-frame_rate = 240
+frame_rate = 144
 
 
 def display_ball_stats():
@@ -303,6 +320,7 @@ def cheater_mode_multi():
 
 
 def game_loop():
+    global brick_count
     screen.fill(bgColor)
 
     # Cheater Mode Act
