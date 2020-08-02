@@ -17,6 +17,7 @@ fgColor = [50, 100, 200]
 red = [255, 0, 0]
 blue = [0, 255, 0]
 green = [0, 0, 255]
+white = [255, 255, 255]
 # Font
 font_size = 25
 font = pygame.font.SysFont("", font_size)
@@ -27,9 +28,15 @@ class MultiBall:
     def __init__(self, direction):
         self.radius = 11
         self.x = screen_width / 2
-        self.y = bricks[len(bricks) - 1].y + bricks[len(bricks) - 1].height + self.radius
+        if len(bricks) != 0:
+            self.y = bricks[len(bricks) - 1].y + bricks[len(bricks) - 1].height + self.radius + 1
+        else:
+            self.y = screen_height / 2
         self.direction = direction
         self.g = 0
+        self.color = fgColor
+        self.max_x = 4
+        self.max_y = 5
 
     def move(self):
         # self.gravity()
@@ -46,32 +53,26 @@ class MultiBall:
             pygame.draw.circle(screen, bgColor, (int(self.x), int(self.y)), self.radius)
 
     def draw(self):
-        pygame.draw.circle(screen, fgColor, (int(self.x), int(self.y)), self.radius)
-
-    def reset(self):
-        # self.__init__((random.randint(-3, 3), random.randint(1, 2)))
-        self.__init__((0, 1))
+        pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.radius)
 
     def update_pos(self, x, y):
         self.x = x
         self.y = y
 
     def speed_limit_x(self, x_dir):
-        max_x_speed = 4
-        if self.direction[0] > max_x_speed:
-            limited_x = max_x_speed
-        elif self.direction[0] < -max_x_speed:
-            limited_x = -max_x_speed
+        if self.direction[0] > self.max_x:
+            limited_x = self.max_x
+        elif self.direction[0] < -self.max_x:
+            limited_x = -self.max_x
         else:
             limited_x = x_dir
         return limited_x
 
     def speed_limit_y(self, y_dir):
-        max_y_speed = 5
-        if self.direction[1] > max_y_speed:
-            limited_y = max_y_speed
-        elif self.direction[1] < -max_y_speed:
-            limited_y = -max_y_speed
+        if self.direction[1] > self.max_y:
+            limited_y = self.max_y
+        elif self.direction[1] < -self.max_y:
+            limited_y = -self.max_y
         else:
             limited_y = y_dir
         return limited_y
@@ -91,30 +92,46 @@ class MultiBall:
             self.update_pos(self.x, self.radius)
         # if below screen
         if self.y >= screen_height - self.radius:
-            self.reset()
+            self.__init__((0, 1))
 
     def bounce_paddle(self):
-        boost_x = (player.speed / 2.5)
-        boost_y = (player.speed / 6)
+        boost_x = (1 / player.speed) * 1.1
+        boost_y = (1 / player.speed) * 1
+        if player.boost:
+            boost_x *= 4
+            boost_y *= 4
         if self.collide_paddle(player.x, player.y, player.width):
             self.update_pos(self.x, player.y - self.radius)
             if player.direction != "":
                 # if ball direction == right
-                if self.direction[0] >= 0 and player.direction == "right":
-                    self.direction = (self.direction[0] + boost_x, self.direction[1])
-                    self.direction = (self.direction[0], -(self.direction[1] + boost_y))
-                elif self.direction[0] >= 0 and player.direction == "left":
-                    self.direction = (self.direction[0] - boost_x, self.direction[1])
-                    self.direction = (self.direction[0], -(self.direction[1] - boost_y))
+                if self.direction[0] > 0:
+                    if player.direction == "right":
+                        self.direction = (self.direction[0] + self.direction[0] * boost_x,
+                                          -self.direction[1] - self.direction[1] * boost_y)
+                    elif player.direction == "left":
+                        self.direction = (self.direction[0] - self.direction[0] * boost_x,
+                                          -self.direction[1] + self.direction[1] * boost_y)
                 # if ball direction == left
-                elif self.direction[0] < 0 and player.direction == "right":
-                    self.direction = (self.direction[0] + boost_x, self.direction[1])
-                    self.direction = (self.direction[0], -(self.direction[1] - boost_y))
-                elif self.direction[0] < 0 and player.direction == "left":
-                    self.direction = (self.direction[0] - boost_x, self.direction[1])
-                    self.direction = (self.direction[0], -(self.direction[1] + boost_y))
+                elif self.direction[0] < 0:
+                    if player.direction == "right":
+                        self.direction = (self.direction[0] + abs(self.direction[0]) * boost_x,
+                                          -self.direction[1] + self.direction[1] * boost_y)
+                    elif player.direction == "left":
+                        self.direction = (self.direction[0] - abs(self.direction[0]) * boost_x,
+                                          -self.direction[1] - self.direction[1] * boost_y)
+                # if bal direction == straight
+                elif self.direction[0] == 0:
+                    if player.direction == "right":
+                        self.direction = (self.direction[0] + boost_x + 1,
+                                          -self.direction[1] - boost_y)
+                    elif player.direction == "left":
+                        self.direction = (self.direction[0] - boost_x - 1,
+                                          -self.direction[1] - boost_y)
             else:
                 self.direction = (self.direction[0], -self.direction[1])
+        if player.boost:
+            boost_x /= 4
+            boost_y /= 4
 
     def collide_paddle(self, paddle_x, paddle_y, paddle_w):
         if paddle_x + paddle_w + self.radius >= self.x >= paddle_x - self.radius and self.y >= paddle_y - self.radius:
@@ -125,26 +142,25 @@ class MultiBall:
 
     # need to fix bounce against all sides of brick
     def bounce_brick(self):
-        global brick_count
-        broken_bricks = []
         for brick in range(len(bricks)):
             if bricks[brick].x + bricks[brick].width + self.radius >= self.x >= bricks[brick].x - self.radius:
                 if bricks[brick].y - self.radius <= self.y <= bricks[brick].y + bricks[brick].height + self.radius:
-                    if (self.y - self.radius - bricks[brick].y + bricks[brick].height)\
-                            > (bricks[brick].y - self.y + self.radius):
+                    if (self.y - self.radius - bricks[brick].y + bricks[brick].height) > \
+                            (bricks[brick].y - self.y + self.radius):
                         self.y = bricks[brick].y + bricks[brick].height + self.radius + 1
                         self.direction = (self.direction[0], -self.direction[1])
                     else:
                         self.y = bricks[brick].y - self.radius - 1
                         self.direction = (self.direction[0], -self.direction[1])
+
+                    # Break Brick or Lower Brick Level
                     if bricks[brick].level - 1 == 0:
-                        broken_bricks.append(brick)
+                        bricks.pop(brick)
+                        break
                     else:
                         bricks[brick].level -= 1
                         bricks[brick].color = brick_colors[(bricks[brick].level % len(brick_colors))]
-        for pop in range(len(broken_bricks)):
-            bricks.pop(broken_bricks[pop])
-            brick_count -= 1
+                        break
 
     def gravity(self):
         gravity = (0.12 / frame_rate)
@@ -161,21 +177,21 @@ class MultiBall:
 
 class Player:
 
-    def __init__(self, x, y, width, height, direction, speed):
-        self.x = x - width / 2
-        self.y = y - height / 2
+    def __init__(self, width, height, speed):
+        self.x = screen_width / 2 - width / 2
+        self.y = screen_height - (screen_height / 30) - height / 2
         self.width = width
         self.height = height
-        self.direction = direction
+        self.direction = ""
         self.speed = speed
         self.boost = False
         self.color = fgColor
 
     def move(self):
         if self.direction == "left" and self.x >= 0:
-            self.x -= self.speed
+            self.x -= int(self.speed)
         elif self.direction == "right" and self.x <= screen_width - self.width:
-            self.x += self.speed
+            self.x += int(self.speed)
 
     def clear(self):
         pygame.draw.rect(screen, bgColor, (int(self.x), int(self.y), self.width, self.height))
@@ -202,32 +218,29 @@ class Brick:
 
 # Initialize Bricks (x, y, width, height, level)
 bricks = []
-brick_col = 11
+brick_col = 6
 brick_row = 3
-brick_lvl = 4
+brick_lvl = 2
 brick_colors = [fgColor, red, green, blue]
 segment = screen_width / brick_col
 brick_w = segment * 0.70
 brick_space = (segment - brick_w) * brick_col / (brick_col + 1)
 brick_h = 20
-global brick_count
-brick_count = 0
 
 for row in range(brick_row):
     for col in range(brick_col):
-        bricks.append(brick_count)
+        bricks.append((row * brick_col) + col)
         x_offset = brick_space + (brick_w + brick_space) * col
         y_offset = brick_space + (brick_h + brick_space) * row
-        bricks[brick_count] = Brick(x_offset, y_offset, brick_w, brick_h, brick_lvl)
-        brick_count += 1
+        bricks[(row * brick_col) + col] = Brick(x_offset, y_offset, brick_w, brick_h, brick_lvl)
 
 # Initialize Ball (direction)
 multi_ball = [0]
-ball_count = 1
 multi_ball[0] = MultiBall((0, 1))
 
 # Initialize Paddle (x, y, width, height, direction, speed)
-player = Player(screen_width / 2, screen_height - (screen_height / 30), 200, 20, "", 3)
+player = Player(200, 20, 3)
+shift_boost = player.speed * 2
 player.draw()
 
 # Game Loop
@@ -235,7 +248,7 @@ clock = pygame.time.Clock()
 running = True
 cheater = False
 pause = False
-shift_boost = 3
+stats = False
 frame_rate = 144
 
 
@@ -243,15 +256,15 @@ def display_ball_stats():
     g_text = str(multi_ball[0].g)
     dx_text = str(multi_ball[0].direction[0])
     dy_text = str(multi_ball[0].direction[1])
-    display_g = font.render("g: " + g_text[0:5], True, fgColor)
+    display_g = font.render("g: " + g_text[0:5], True, white)
     if multi_ball[0].direction[0] >= 0:
-        display_dx = font.render("x:  " + dx_text[0:5], True, fgColor)
+        display_dx = font.render("x:  " + dx_text[0:5], True, white)
     else:
-        display_dx = font.render("x: " + dx_text[0:6], True, fgColor)
+        display_dx = font.render("x: " + dx_text[0:6], True, white)
     if multi_ball[0].direction[1] >= 0:
-        display_dy = font.render("y: " + dy_text[0:5], True, fgColor)
+        display_dy = font.render("y: " + dy_text[0:5], True, white)
     else:
-        display_dy = font.render("y: " + dy_text[0:6], True, fgColor)
+        display_dy = font.render("y: " + dy_text[0:6], True, white)
     screen.blit(display_g, (0, 0))
     screen.blit(display_dx, (0, font_size))
     screen.blit(display_dy, (0, font_size * 2))
@@ -321,7 +334,6 @@ def cheater_mode_multi():
 
 
 def game_loop():
-    global brick_count
     screen.fill(bgColor)
 
     # Cheater Mode Act
@@ -334,20 +346,22 @@ def game_loop():
     player.draw()
 
     # Brick
-    for brick in range(brick_count):
+    for brick in range(len(bricks)):
         bricks[brick].draw()
 
     # Ball
-    for i in range(ball_count):
+    for i in range(len(multi_ball)):
         multi_ball[i].move()
-    for i in range(ball_count):
+    for i in range(len(multi_ball)):
         multi_ball[i].draw()
 
     # Cheater Mode Stop
     if cheater:
         player.direction = ""
 
-    # display_ball_stats()
+    if stats:
+        display_ball_stats()
+
     pygame.display.flip()
 
 
@@ -390,17 +404,13 @@ while running:
 
             # Add Ball
             if keys[K_b]:
-                multi_ball.append(ball_count)
-                # multi_ball[len(multi_ball) - 1] = Ball((random.randint(-3, 3), random.randint(1, 2)))
+                multi_ball.append(len(multi_ball) + 1)
                 multi_ball[len(multi_ball) - 1] = MultiBall((0, 1))
-                ball_count += 1
 
             # Kill Ball
             if keys[K_k]:
                 if len(multi_ball) > 1:
                     multi_ball.pop(len(multi_ball) - 1)
-                    # multi_ball[len(multi_ball) - 1] = Ball((random.randint(-3, 3), random.randint(1, 2)))
-                    ball_count -= 1
 
             # Pause
             if keys[K_SPACE] and pause is False:
@@ -412,6 +422,16 @@ while running:
             if pause is True:
                 if keys[K_n]:
                     game_loop()
+
+            # Show Ball Stats
+            if keys[K_s] and stats:
+                stats = False
+            elif keys[K_s]:
+                stats = True
+
+            # Reset Ball
+            if keys[K_r]:
+                multi_ball[0].__init__((0, 1))
 
         # On Key Up
         if event.type == pygame.KEYUP:
@@ -432,4 +452,5 @@ while running:
 
     if pause is False:
         game_loop()
+
     clock.tick(frame_rate)
