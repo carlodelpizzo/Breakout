@@ -20,7 +20,8 @@ green = [0, 0, 255]
 white = [255, 255, 255]
 # Font
 font_size = 25
-font = pygame.font.SysFont("", font_size)
+font_face = "Calibri"
+font = pygame.font.SysFont(font_face, 25)
 
 
 class MultiBall:
@@ -37,6 +38,8 @@ class MultiBall:
         self.color = fgColor
         self.max_x = 4
         self.max_y = 5
+        self.influence = False
+        self.inf_i = -1
 
     def move(self):
         # self.gravity()
@@ -100,7 +103,11 @@ class MultiBall:
         if player.boost:
             boost_x *= 4
             boost_y *= 4
+
         if self.collide_paddle(player.x, player.y, player.width):
+            player.influence.append(int(frame_rate * 5))
+            self.inf_i = len(player.influence) - 1
+            self.influence = True
             self.update_pos(self.x, player.y - self.radius)
             if player.direction != "":
                 # if ball direction == right
@@ -127,8 +134,41 @@ class MultiBall:
                     elif player.direction == "left":
                         self.direction = (self.direction[0] - boost_x - 1,
                                           -self.direction[1] - boost_y)
-            else:
+            elif player.direction == "":
                 self.direction = (self.direction[0], -self.direction[1])
+        elif self.inf_i != -1:
+            if player.influence[self.inf_i] > 0 and self.influence:
+                if player.direction == "right":
+                    player.influence.pop(self.inf_i)
+                    self.influence = False
+                    # Ball direction == right
+                    if self.direction[0] > 0:
+                        self.direction = (self.direction[0] + self.direction[0] * boost_x,
+                                          self.direction[1] - self.direction[1] * boost_y)
+                    # Ball direction == left
+                    elif self.direction[0] < 0:
+                        self.direction = (self.direction[0] + abs(self.direction[0]) * boost_x,
+                                          self.direction[1] + self.direction[1] * boost_y)
+                    # Ball direction == straight
+                    elif self.direction[0] == 0:
+                        self.direction = (self.direction[0] + boost_x + 1,
+                                          self.direction[1] - boost_y)
+                elif player.direction == "left":
+                    player.influence.pop(self.inf_i)
+                    self.influence = False
+                    # Ball direction == right
+                    if self.direction[0] > 0:
+                        self.direction = (self.direction[0] - self.direction[0] * boost_x,
+                                          self.direction[1] + self.direction[1] * boost_y)
+                    # Ball direction == left
+                    elif self.direction[0] < 0:
+                        self.direction = (self.direction[0] - abs(self.direction[0]) * boost_x,
+                                          self.direction[1] - self.direction[1] * boost_y)
+                    # Ball direction == straight
+                    elif self.direction[0] == 0:
+                        self.direction = (self.direction[0] - boost_x - 1,
+                                          self.direction[1] - boost_y)
+
         if player.boost:
             boost_x /= 4
             boost_y /= 4
@@ -140,27 +180,38 @@ class MultiBall:
         else:
             return False
 
-    # need to fix bounce against all sides of brick
     def bounce_brick(self):
         for brick in range(len(bricks)):
             if bricks[brick].x + bricks[brick].width + self.radius >= self.x >= bricks[brick].x - self.radius:
                 if bricks[brick].y - self.radius <= self.y <= bricks[brick].y + bricks[brick].height + self.radius:
-                    if (self.y - self.radius - bricks[brick].y + bricks[brick].height) > \
-                            (bricks[brick].y - self.y + self.radius):
-                        self.y = bricks[brick].y + bricks[brick].height + self.radius + 1
-                        self.direction = (self.direction[0], -self.direction[1])
+                    # Is Ball within center region of Brick
+                    if bricks[brick].x + bricks[brick].width - 1 > self.x > bricks[brick].x + 1:
+                        # Closer to bottom than top of Brick
+                        if self.y - self.radius - bricks[brick].y + bricks[brick].height > \
+                                bricks[brick].y - self.y + self.radius:
+                            self.y = bricks[brick].y + bricks[brick].height + self.radius + 1
+                            self.direction = (self.direction[0], -self.direction[1])
+                        else:
+                            self.y = bricks[brick].y - self.radius - 1
+                            self.direction = (self.direction[0], -self.direction[1])
                     else:
-                        self.y = bricks[brick].y - self.radius - 1
-                        self.direction = (self.direction[0], -self.direction[1])
+                        # Closer to left than right of Brick
+                        if self.x - bricks[brick].x < bricks[brick].x + bricks[brick].width - self.x:
+                            self.x = bricks[brick].x - self.radius - 1
+                            self.direction = (-self.direction[0], self.direction[1])
+                        else:
+                            self.x = bricks[brick].x + bricks[brick].width + self.radius + 1
+                            self.direction = (-self.direction[0], self.direction[1])
 
                     # Break Brick or Lower Brick Level
-                    if bricks[brick].level - 1 == 0:
-                        bricks.pop(brick)
-                        break
-                    else:
-                        bricks[brick].level -= 1
-                        bricks[brick].color = brick_colors[(bricks[brick].level % len(brick_colors))]
-                        break
+                    if bricks[brick].cooldown == 0:
+                        if bricks[brick].level - 1 == 0:
+                            bricks.pop(brick)
+                        else:
+                            bricks[brick].level -= 1
+                            bricks[brick].color = brick_colors[(bricks[brick].level % len(brick_colors))]
+                            bricks[brick].cooldown = int(frame_rate / 10)
+                    break
 
     def gravity(self):
         gravity = (0.12 / frame_rate)
@@ -186,6 +237,7 @@ class Player:
         self.speed = speed
         self.boost = False
         self.color = fgColor
+        self.influence = []
 
     def move(self):
         if self.direction == "left" and self.x >= 0:
@@ -193,11 +245,23 @@ class Player:
         elif self.direction == "right" and self.x <= screen_width - self.width:
             self.x += int(self.speed)
 
+        self.inf_drain()
+
     def clear(self):
         pygame.draw.rect(screen, bgColor, (int(self.x), int(self.y), self.width, self.height))
 
     def draw(self):
         pygame.draw.rect(screen, self.color, (int(self.x), int(self.y), self.width, self.height))
+
+    def inf_drain(self):
+        pop_inf = []
+        for i in range(len(self.influence)):
+            if self.influence[i] > 0:
+                self.influence[i] -= 1
+            elif self.influence[i] == 0:
+                pop_inf.append(i)
+        # for p in pop_inf:
+        #     self.influence.pop(pop_inf[p])
 
 
 class Brick:
@@ -208,6 +272,7 @@ class Brick:
         self.height = height
         self.color = fgColor
         self.level = level
+        self.cooldown = 0
 
     def draw(self):
         pygame.draw.rect(screen, self.color, (int(self.x), int(self.y), int(self.width), int(self.height)))
@@ -215,24 +280,34 @@ class Brick:
     def clear(self):
         pygame.draw.rect(screen, bgColor, (int(self.x), int(self.y), self.width, self.height))
 
+    def drain_cooldown(self):
+        if self.cooldown > 0:
+            self.cooldown -= 1
+
 
 # Initialize Bricks (x, y, width, height, level)
-bricks = []
-brick_col = 6
-brick_row = 3
-brick_lvl = 2
 brick_colors = [fgColor, red, green, blue]
-segment = screen_width / brick_col
-brick_w = segment * 0.70
-brick_space = (segment - brick_w) * brick_col / (brick_col + 1)
-brick_h = 20
+bricks = []
 
-for row in range(brick_row):
-    for col in range(brick_col):
-        bricks.append((row * brick_col) + col)
-        x_offset = brick_space + (brick_w + brick_space) * col
-        y_offset = brick_space + (brick_h + brick_space) * row
-        bricks[(row * brick_col) + col] = Brick(x_offset, y_offset, brick_w, brick_h, brick_lvl)
+
+def init_bricks():
+    brick_col = 6
+    brick_row = 3
+    brick_lvl = 2
+    segment = screen_width / brick_col
+    brick_w = segment * 0.70
+    brick_space = (segment - brick_w) * brick_col / (brick_col + 1)
+    brick_h = 20
+    for row in range(brick_row):
+        for col in range(brick_col):
+            bricks.append((row * brick_col) + col)
+            x_offset = brick_space + (brick_w + brick_space) * col
+            y_offset = brick_space + (brick_h + brick_space) * row
+            bricks[(row * brick_col) + col] = Brick(x_offset, y_offset, brick_w, brick_h, brick_lvl)
+
+
+init_bricks()
+
 
 # Initialize Ball (direction)
 multi_ball = [0]
@@ -252,22 +327,84 @@ stats = False
 frame_rate = 144
 
 
-def display_ball_stats():
+def game_loop():
+    screen.fill(bgColor)
+
+    # Cheater Mode Act
+    if cheater:
+        # cheater_mode()
+        cheater_mode_multi()
+
+    # Player
+    player.move()
+    player.draw()
+
+    # Brick
+    for brick in range(len(bricks)):
+        bricks[brick].draw()
+        bricks[brick].drain_cooldown()
+
+    # Ball
+    for i in range(len(multi_ball)):
+        multi_ball[i].move()
+    for i in range(len(multi_ball)):
+        multi_ball[i].draw()
+
+    # Cheater Mode Stop
+    if cheater:
+        player.direction = ""
+
+    if stats:
+        display_stats()
+
+    pygame.display.flip()
+
+
+def display_stats():
+    stat_num = 0
+    # Ball Stats
     g_text = str(multi_ball[0].g)
     dx_text = str(multi_ball[0].direction[0])
     dy_text = str(multi_ball[0].direction[1])
-    display_g = font.render("g: " + g_text[0:5], True, white)
+
+    display_g = font.render("ball g: " + g_text[0:5], True, white)
     if multi_ball[0].direction[0] >= 0:
-        display_dx = font.render("x:  " + dx_text[0:5], True, white)
+        display_dx = font.render("ball x:  " + dx_text[0:5], True, white)
     else:
-        display_dx = font.render("x: " + dx_text[0:6], True, white)
+        display_dx = font.render("ball x: " + dx_text[0:6], True, white)
     if multi_ball[0].direction[1] >= 0:
-        display_dy = font.render("y: " + dy_text[0:5], True, white)
+        display_dy = font.render("ball y: " + dy_text[0:5], True, white)
     else:
-        display_dy = font.render("y: " + dy_text[0:6], True, white)
-    screen.blit(display_g, (0, 0))
-    screen.blit(display_dx, (0, font_size))
-    screen.blit(display_dy, (0, font_size * 2))
+        display_dy = font.render("ball y: " + dy_text[0:6], True, white)
+
+    screen.blit(display_g, (0, stat_num))
+    stat_num += 1
+    screen.blit(display_dx, (0, font_size * stat_num))
+    stat_num += 1
+    screen.blit(display_dy, (0, font_size * stat_num))
+    stat_num += 1
+
+    # Player Stats
+    influence = str(player.influence)
+    display_inf = font.render("player inf: " + influence, True, white)
+    screen.blit(display_inf, (0, font_size * stat_num))
+    stat_num += 1
+
+    # Brick Stats
+    display_cool = []
+    shown = 0
+    for brick in range(len(bricks)):
+        if bricks[brick].cooldown != 0:
+            cool = str(bricks[brick].cooldown)
+            display_cool.append(brick)
+            display_cool[shown] = font.render("brick [" + str(brick) + "]: " + cool, True, white)
+            screen.blit(display_cool[shown], (0, font_size * stat_num))
+            stat_num += 1
+            shown += 1
+        if bricks[brick].cooldown == 0 and brick in display_cool:
+            display_cool.pop(display_cool.index(brick))
+            stat_num -= 1
+            shown -= 1
 
 
 def cheater_mode():
@@ -331,38 +468,6 @@ def cheater_mode_multi():
             player.x = 0
         elif player.x > screen_width - player.width:
             player.x = screen_width - player.width
-
-
-def game_loop():
-    screen.fill(bgColor)
-
-    # Cheater Mode Act
-    if cheater:
-        # cheater_mode()
-        cheater_mode_multi()
-
-    # Player
-    player.move()
-    player.draw()
-
-    # Brick
-    for brick in range(len(bricks)):
-        bricks[brick].draw()
-
-    # Ball
-    for i in range(len(multi_ball)):
-        multi_ball[i].move()
-    for i in range(len(multi_ball)):
-        multi_ball[i].draw()
-
-    # Cheater Mode Stop
-    if cheater:
-        player.direction = ""
-
-    if stats:
-        display_ball_stats()
-
-    pygame.display.flip()
 
 
 while running:
@@ -429,9 +534,11 @@ while running:
             elif keys[K_s]:
                 stats = True
 
-            # Reset Ball
+            # Reset Game
             if keys[K_r]:
                 multi_ball[0].__init__((0, 1))
+                bricks = []
+                init_bricks()
 
         # On Key Up
         if event.type == pygame.KEYUP:
