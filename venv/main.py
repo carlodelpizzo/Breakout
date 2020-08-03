@@ -131,43 +131,44 @@ class MultiBall:
                 elif self.direction[0] == 0:
                     if player.direction == "right":
                         self.direction = (self.direction[0] + boost_x + 1,
-                                          -self.direction[1] - boost_y)
+                                          -self.direction[1] - self.direction[1] * boost_y)
                     elif player.direction == "left":
                         self.direction = (self.direction[0] - boost_x - 1,
-                                          -self.direction[1] - boost_y)
+                                          -self.direction[1] - self.direction[1] * boost_y)
             elif player.direction == "":
                 self.direction = (self.direction[0], -self.direction[1])
-        if self.influence and player.influence[self.i] > 0:
+
+        elif self.influence and player.influence[self.i] > 0:
             if player.direction == "right":
                 player.influence[self.i] = 0
                 self.influence = False
                 # Ball direction == right
                 if self.direction[0] > 0:
                     self.direction = (self.direction[0] + self.direction[0] * boost_x,
-                                      self.direction[1] - self.direction[1] * boost_y)
+                                      self.direction[1] + self.direction[1] * boost_y)
                 # Ball direction == left
                 elif self.direction[0] < 0:
                     self.direction = (self.direction[0] + abs(self.direction[0]) * boost_x,
-                                      self.direction[1] + self.direction[1] * boost_y)
+                                      self.direction[1] - self.direction[1] * boost_y)
                 # Ball direction == straight
                 elif self.direction[0] == 0:
                     self.direction = (self.direction[0] + boost_x + 1,
-                                      self.direction[1] - boost_y)
+                                      self.direction[1] + self.direction[1] * boost_y)
             elif player.direction == "left":
                 player.influence[self.i] = 0
                 self.influence = False
                 # Ball direction == right
                 if self.direction[0] > 0:
                     self.direction = (self.direction[0] - self.direction[0] * boost_x,
-                                      self.direction[1] + self.direction[1] * boost_y)
+                                      self.direction[1] - self.direction[1] * boost_y)
                 # Ball direction == left
                 elif self.direction[0] < 0:
                     self.direction = (self.direction[0] - abs(self.direction[0]) * boost_x,
-                                      self.direction[1] - self.direction[1] * boost_y)
+                                      self.direction[1] + self.direction[1] * boost_y)
                 # Ball direction == straight
                 elif self.direction[0] == 0:
                     self.direction = (self.direction[0] - boost_x - 1,
-                                      self.direction[1] - boost_y)
+                                      self.direction[1] + self.direction[1] * boost_y)
 
         if player.boost:
             boost_x /= 4
@@ -284,6 +285,7 @@ class Brick:
 
 
 # Initialize Bricks (x, y, width, height, level)
+# brick colors to indicate break level
 brick_colors = [fgColor, red, green, blue]
 bricks = []
 
@@ -292,10 +294,9 @@ def init_bricks():
     brick_col = 6
     brick_row = 3
     brick_lvl = 2
-    segment = screen_width / brick_col
-    brick_w = segment * 0.70
-    brick_space = (segment - brick_w) * brick_col / (brick_col + 1)
+    brick_w = (screen_width / brick_col) * 0.70
     brick_h = 20
+    brick_space = (screen_width / brick_col - brick_w) * brick_col / (brick_col + 1)
     for row in range(brick_row):
         for col in range(brick_col):
             bricks.append((row * brick_col) + col)
