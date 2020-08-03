@@ -39,7 +39,7 @@ class MultiBall:
         self.max_x = 4
         self.max_y = 5
         self.influence = False
-        self.inf_i = -1
+        self.i = 0
 
     def move(self):
         # self.gravity()
@@ -95,7 +95,9 @@ class MultiBall:
             self.update_pos(self.x, self.radius)
         # if below screen
         if self.y >= screen_height - self.radius:
+            i = self.i
             self.__init__((0, 1))
+            self.i = i
 
     def bounce_paddle(self):
         boost_x = (1 / player.speed) * 1.1
@@ -105,8 +107,7 @@ class MultiBall:
             boost_y *= 4
 
         if self.collide_paddle(player.x, player.y, player.width):
-            player.influence.append(int(frame_rate * 5))
-            self.inf_i = len(player.influence) - 1
+            player.influence[self.i] = (int(frame_rate / 5))
             self.influence = True
             self.update_pos(self.x, player.y - self.radius)
             if player.direction != "":
@@ -136,38 +137,37 @@ class MultiBall:
                                           -self.direction[1] - boost_y)
             elif player.direction == "":
                 self.direction = (self.direction[0], -self.direction[1])
-        elif self.inf_i != -1:
-            if player.influence[self.inf_i] > 0 and self.influence:
-                if player.direction == "right":
-                    player.influence.pop(self.inf_i)
-                    self.influence = False
-                    # Ball direction == right
-                    if self.direction[0] > 0:
-                        self.direction = (self.direction[0] + self.direction[0] * boost_x,
-                                          self.direction[1] - self.direction[1] * boost_y)
-                    # Ball direction == left
-                    elif self.direction[0] < 0:
-                        self.direction = (self.direction[0] + abs(self.direction[0]) * boost_x,
-                                          self.direction[1] + self.direction[1] * boost_y)
-                    # Ball direction == straight
-                    elif self.direction[0] == 0:
-                        self.direction = (self.direction[0] + boost_x + 1,
-                                          self.direction[1] - boost_y)
-                elif player.direction == "left":
-                    player.influence.pop(self.inf_i)
-                    self.influence = False
-                    # Ball direction == right
-                    if self.direction[0] > 0:
-                        self.direction = (self.direction[0] - self.direction[0] * boost_x,
-                                          self.direction[1] + self.direction[1] * boost_y)
-                    # Ball direction == left
-                    elif self.direction[0] < 0:
-                        self.direction = (self.direction[0] - abs(self.direction[0]) * boost_x,
-                                          self.direction[1] - self.direction[1] * boost_y)
-                    # Ball direction == straight
-                    elif self.direction[0] == 0:
-                        self.direction = (self.direction[0] - boost_x - 1,
-                                          self.direction[1] - boost_y)
+        if self.influence and player.influence[self.i] > 0:
+            if player.direction == "right":
+                player.influence[self.i] = 0
+                self.influence = False
+                # Ball direction == right
+                if self.direction[0] > 0:
+                    self.direction = (self.direction[0] + self.direction[0] * boost_x,
+                                      self.direction[1] - self.direction[1] * boost_y)
+                # Ball direction == left
+                elif self.direction[0] < 0:
+                    self.direction = (self.direction[0] + abs(self.direction[0]) * boost_x,
+                                      self.direction[1] + self.direction[1] * boost_y)
+                # Ball direction == straight
+                elif self.direction[0] == 0:
+                    self.direction = (self.direction[0] + boost_x + 1,
+                                      self.direction[1] - boost_y)
+            elif player.direction == "left":
+                player.influence[self.i] = 0
+                self.influence = False
+                # Ball direction == right
+                if self.direction[0] > 0:
+                    self.direction = (self.direction[0] - self.direction[0] * boost_x,
+                                      self.direction[1] + self.direction[1] * boost_y)
+                # Ball direction == left
+                elif self.direction[0] < 0:
+                    self.direction = (self.direction[0] - abs(self.direction[0]) * boost_x,
+                                      self.direction[1] - self.direction[1] * boost_y)
+                # Ball direction == straight
+                elif self.direction[0] == 0:
+                    self.direction = (self.direction[0] - boost_x - 1,
+                                      self.direction[1] - boost_y)
 
         if player.boost:
             boost_x /= 4
@@ -237,7 +237,7 @@ class Player:
         self.speed = speed
         self.boost = False
         self.color = fgColor
-        self.influence = []
+        self.influence = [0]
 
     def move(self):
         if self.direction == "left" and self.x >= 0:
@@ -254,14 +254,12 @@ class Player:
         pygame.draw.rect(screen, self.color, (int(self.x), int(self.y), self.width, self.height))
 
     def inf_drain(self):
-        pop_inf = []
         for i in range(len(self.influence)):
-            if self.influence[i] > 0:
+            if self.influence[i] > 1:
                 self.influence[i] -= 1
-            elif self.influence[i] == 0:
-                pop_inf.append(i)
-        # for p in pop_inf:
-        #     self.influence.pop(pop_inf[p])
+            elif self.influence[i] == 1:
+                self.influence[i] -= 1
+                multi_ball[i].influence = False
 
 
 class Brick:
@@ -362,12 +360,14 @@ def game_loop():
 
 def display_stats():
     stat_num = 0
-    # Ball Stats
+    # Main Ball Stats
     g_text = str(multi_ball[0].g)
     dx_text = str(multi_ball[0].direction[0])
     dy_text = str(multi_ball[0].direction[1])
+    inf_text = str(multi_ball[0].influence)
 
     display_g = font.render("ball g: " + g_text[0:5], True, white)
+    display_inf = font.render("ball inf: " + inf_text, True, white)
     if multi_ball[0].direction[0] >= 0:
         display_dx = font.render("ball x:  " + dx_text[0:5], True, white)
     else:
@@ -382,6 +382,8 @@ def display_stats():
     screen.blit(display_dx, (0, font_size * stat_num))
     stat_num += 1
     screen.blit(display_dy, (0, font_size * stat_num))
+    stat_num += 1
+    screen.blit(display_inf, (0, font_size * stat_num))
     stat_num += 1
 
     # Player Stats
@@ -511,10 +513,13 @@ while running:
             if keys[K_b]:
                 multi_ball.append(len(multi_ball) + 1)
                 multi_ball[len(multi_ball) - 1] = MultiBall((0, 1))
+                player.influence.append(0)
+                multi_ball[len(multi_ball) - 1].i = len(multi_ball) - 1
 
             # Kill Ball
             if keys[K_k]:
                 if len(multi_ball) > 1:
+                    player.influence.pop(len(multi_ball) - 1)
                     multi_ball.pop(len(multi_ball) - 1)
 
             # Pause
