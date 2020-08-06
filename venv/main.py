@@ -6,7 +6,7 @@ from pygame.locals import *
 pygame.init()
 
 # Initialize Screen
-screen_width = 1000
+screen_width = 900
 screen_height = 600
 screen = pygame.display.set_mode((screen_width, screen_height))
 # Title
@@ -40,12 +40,16 @@ class MultiBall:
         self.max_y = 5
         self.influence = False
         self.i = 0
+        self.var = 0
+        self.var1 = 0
+        self.var2 = 0
 
     def move(self):
         # self.gravity()
         self.bounce_wall()
         self.bounce_paddle()
         self.bounce_brick()
+        # self.rainbow_mode()
         self.update_pos(self.x + self.speed_limit_x(self.direction[0]), self.y + self.speed_limit_y(self.direction[1]))
 
     def clear(self):
@@ -107,7 +111,7 @@ class MultiBall:
             boost_y *= 4
 
         if self.collide_paddle(player.x, player.y, player.width):
-            player.influence[self.i] = (int(frame_rate / 5))
+            player.influence[self.i] = (int(frame_rate / 8))
             self.influence = True
             self.update_pos(self.x, player.y - self.radius)
             if player.direction != "":
@@ -211,7 +215,13 @@ class MultiBall:
                         else:
                             bricks[brick].level -= 1
                             bricks[brick].color = brick_colors[(bricks[brick].level % len(brick_colors))]
-                            bricks[brick].cooldown = int(frame_rate / 10)
+                            # rainbow mode
+                            # ran1 = random.randint(100, 255)
+                            # ran2 = random.randint(100, 255)
+                            # ran3 = random.randint(100, 255)
+                            # bricks[brick].color = (ran1, ran2, ran3)
+                            # self.color = (ran1, ran2, ran3)
+                            # bricks[brick].cooldown = int(frame_rate / 10)
                     break
 
     def gravity(self):
@@ -225,6 +235,43 @@ class MultiBall:
         else:
             self.g += gravity
             self.direction = (self.direction[0], self.direction[1] + self.g)
+
+    def rainbow_mode(self):
+        # Red Chan
+        if self.color[0] < 255 and self.var == 0:
+            self.color = (self.color[0] + 1, self.color[1], self.color[2])
+        elif self.color[0] == 255:
+            self.var = 1
+            self.color = (self.color[0] - 1, self.color[1], self.color[2])
+        elif self.color[0] > 100 and self.var != 0:
+            self.color = (self.color[0] - 1, self.color[1], self.color[2])
+        elif self.color[0] <= 100:
+            self.var = 0
+            self.color = (self.color[0] + 1, self.color[1], self.color[2])
+
+        # Green Chan
+        if self.color[1] < 255 and self.var1 == 0:
+            self.color = (self.color[0], self.color[1] + 1, self.color[2])
+        elif self.color[1] == 255:
+            self.var1 = 1
+            self.color = (self.color[0], self.color[1] - 1, self.color[2])
+        elif self.color[1] > 100 and self.var1 != 0:
+            self.color = (self.color[0], self.color[1] - 1, self.color[2])
+        elif self.color[1] <= 100:
+            self.var1 = 0
+            self.color = (self.color[0], self.color[1] + 1, self.color[2])
+
+        # Blue Chan
+        if self.color[2] < 255 and self.var2 == 0:
+            self.color = (self.color[0], self.color[1], self.color[2] + 1)
+        elif self.color[2] == 255:
+            self.var2 = 1
+            self.color = (self.color[0], self.color[1], self.color[2] - 1)
+        elif self.color[2] > 100 and self.var2 != 0:
+            self.color = (self.color[0], self.color[1], self.color[2] - 1)
+        elif self.color[2] <= 100:
+            self.var2 = 0
+            self.color = (self.color[0], self.color[1], self.color[2] + 1)
 
 
 class Player:
@@ -272,9 +319,13 @@ class Brick:
         self.color = fgColor
         self.level = level
         self.cooldown = 0
+        self.var = 0
+        self.var1 = 0
+        self.var2 = 0
 
     def draw(self):
         pygame.draw.rect(screen, self.color, (int(self.x), int(self.y), int(self.width), int(self.height)))
+        self.rainbow_mode()
 
     def clear(self):
         pygame.draw.rect(screen, bgColor, (int(self.x), int(self.y), self.width, self.height))
@@ -283,17 +334,50 @@ class Brick:
         if self.cooldown > 0:
             self.cooldown -= 1
 
+    def rainbow_mode(self):
+        if self.level == 1:
+            # Red Chan
+            if self.color[0] < 255 and self.var == 0:
+                self.color = (self.color[0] + 1, self.color[1], self.color[2])
+            elif self.color[0] == 255:
+                self.var = 1
+                self.color = (self.color[0] - 1, self.color[1], self.color[2])
+            elif self.color[0] > 100 and self.var != 0:
+                self.color = (self.color[0] - 1, self.color[1], self.color[2])
+            elif self.color[0] <= 100:
+                self.var = 0
+                self.color = (self.color[0] + 1, self.color[1], self.color[2])
+
+            # Green Chan
+            if self.color[1] < 255 and self.var1 == 0:
+                self.color = (self.color[0], self.color[1] + 1, self.color[2])
+            elif self.color[1] == 255:
+                self.var1 = 1
+                self.color = (self.color[0], self.color[1] - 1, self.color[2])
+            elif self.color[1] > 100 and self.var1 != 0:
+                self.color = (self.color[0], self.color[1] - 1, self.color[2])
+            elif self.color[1] <= 100:
+                self.var1 = 0
+                self.color = (self.color[0], self.color[1] + 1, self.color[2])
+
+            # Blue Chan
+            if self.color[2] < 255 and self.var2 == 0:
+                self.color = (self.color[0], self.color[1], self.color[2] + 1)
+            elif self.color[2] == 255:
+                self.var2 = 1
+                self.color = (self.color[0], self.color[1], self.color[2] - 1)
+            elif self.color[2] > 100 and self.var2 != 0:
+                self.color = (self.color[0], self.color[1], self.color[2] - 1)
+            elif self.color[2] <= 100:
+                self.var2 = 0
+                self.color = (self.color[0], self.color[1], self.color[2] + 1)
+
 
 # Initialize Bricks (x, y, width, height, level)
-# brick colors to indicate break level
-brick_colors = [fgColor, red, green, blue]
 bricks = []
 
 
-def init_bricks():
-    brick_col = 6
-    brick_row = 3
-    brick_lvl = 2
+def init_bricks(brick_col, brick_row, brick_lvl):
     brick_w = (screen_width / brick_col) * 0.70
     brick_h = 20
     brick_space = (screen_width / brick_col - brick_w) * brick_col / (brick_col + 1)
@@ -305,8 +389,22 @@ def init_bricks():
             bricks[(row * brick_col) + col] = Brick(x_offset, y_offset, brick_w, brick_h, brick_lvl)
 
 
-init_bricks()
+num_cols = 7
+num_rows = 3
+start_lvl = 6
+init_bricks(num_cols, num_rows, start_lvl)
 
+brick_colors = []
+ran1 = random.randint(100, 255)
+ran2 = random.randint(100, 255)
+ran3 = random.randint(100, 255)
+for i in range(bricks[0].level + 1):
+    brick_colors.insert(0, (
+        (((255 - ran1) / bricks[0].level) * i + ran1), ran2 - i * (ran2 / bricks[0].level), ran3 - i * (
+                ran3 / bricks[0].level)))
+brick_colors[1] = (255, 0, 0)
+for i in range(len(bricks)):
+    bricks[i].color = brick_colors[len(brick_colors) - 1]
 
 # Initialize Ball (direction)
 multi_ball = [0]
@@ -323,6 +421,7 @@ running = True
 cheater = False
 pause = False
 stats = False
+gravity = False
 frame_rate = 144
 
 
@@ -344,10 +443,14 @@ def game_loop():
         bricks[brick].drain_cooldown()
 
     # Ball
-    for i in range(len(multi_ball)):
-        multi_ball[i].move()
-    for i in range(len(multi_ball)):
-        multi_ball[i].draw()
+    if gravity:
+        for b in range(len(multi_ball)):
+            multi_ball[b].gravity()
+
+    for b in range(len(multi_ball)):
+        multi_ball[b].move()
+    for b in range(len(multi_ball)):
+        multi_ball[b].draw()
 
     # Cheater Mode Stop
     if cheater:
@@ -544,7 +647,15 @@ while running:
             if keys[K_r]:
                 multi_ball[0].__init__((0, 1))
                 bricks = []
-                init_bricks()
+                init_bricks(num_cols, num_rows, start_lvl)
+
+            # Gravity
+            if keys[K_g] and gravity is False:
+                gravity = True
+            elif keys[K_g] and gravity is True:
+                gravity = False
+                for b in range(len(multi_ball)):
+                    multi_ball[b].g = 0
 
         # On Key Up
         if event.type == pygame.KEYUP:
