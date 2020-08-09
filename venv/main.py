@@ -404,7 +404,7 @@ for i in range(len(bricks)):
 multi_ball = [0]
 multi_ball[0] = MultiBall((0, 1))
 
-# Initialize Paddle (x, y, width, height, direction, speed)
+# Initialize Paddle (width, height, speed)
 player = Player(200, 20, 3)
 shift_boost = player.speed * 2
 player.draw()
