@@ -215,17 +215,11 @@ class MultiBall:
                         else:
                             bricks[brick].level -= 1
                             bricks[brick].color = brick_colors[(bricks[brick].level % len(brick_colors))]
-                            # rainbow mode
-                            # ran1 = random.randint(100, 255)
-                            # ran2 = random.randint(100, 255)
-                            # ran3 = random.randint(100, 255)
-                            # bricks[brick].color = (ran1, ran2, ran3)
-                            # self.color = (ran1, ran2, ran3)
-                            # bricks[brick].cooldown = int(frame_rate / 10)
+                            bricks[brick].cooldown = int(frame_rate / 10)
                     break
 
     def gravity(self):
-        gravity = (0.12 / frame_rate)
+        g = (0.12 / frame_rate)
         if self.collide_paddle(player.x, player.y, player.width):
             self.direction = (self.direction[0], self.direction[1] + self.g)
             self.g = 0
@@ -233,7 +227,7 @@ class MultiBall:
             self.direction = (self.direction[0], self.direction[1] + self.g)
             self.g -= self.g / 3
         else:
-            self.g += gravity
+            self.g += g
             self.direction = (self.direction[0], self.direction[1] + self.g)
 
     def rainbow_mode(self):
@@ -469,7 +463,9 @@ def display_stats():
     dx_text = str(multi_ball[0].direction[0])
     dy_text = str(multi_ball[0].direction[1])
     inf_text = str(multi_ball[0].influence)
+    num_balls = str(len(multi_ball))
 
+    display_num_balls = font.render("Balls: " + num_balls, True, white)
     display_g = font.render("ball g: " + g_text[0:5], True, white)
     display_inf = font.render("ball inf: " + inf_text, True, white)
     if multi_ball[0].direction[0] >= 0:
@@ -488,6 +484,8 @@ def display_stats():
     screen.blit(display_dy, (0, font_size * stat_num))
     stat_num += 1
     screen.blit(display_inf, (0, font_size * stat_num))
+    stat_num += 1
+    screen.blit(display_num_balls, (0, font_size * stat_num))
     stat_num += 1
 
     # Player Stats
